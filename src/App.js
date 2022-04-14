@@ -1,22 +1,18 @@
-import React, {useState, Fragment} from 'react'
+import React, {useState, Fragment, useEffect} from 'react'
 import {AdvancedForm} from './components/AdvancedForm'
 import UserTable from './components/tables/UserTable'
 
 const App = () => {
-    // Data
-    const usersData = [
-        {id: 1, name: 'Tania', username: 'floppydiskette'},
-        {id: 2, name: 'Craig', username: 'siliconeidolon'},
-        {id: 3, name: 'Ben', username: 'benisphere'},
-    ]
 
-    // const [formValues, setFormValues] = useState(usersData)
-
-
-    const handleSubmit = async (values, {setSubmitting}) => {
+    const handleAddSubmit = async (values, {setSubmitting}) => {
         setSubmitting(true)
-        // setFormValues(values)
-        await new Promise((r) => setTimeout(r, 1000))
+        await addUser(values)
+        setSubmitting(false)
+    }
+
+    const handleEditSubmit = async (values, {setSubmitting}) => {
+        setSubmitting(true)
+        await updateUser(values.id, values)
         setSubmitting(false)
     }
 
@@ -31,26 +27,75 @@ const App = () => {
     const initialFormState = {id: 0, name: '', username: ''}
 
     // Setting state
-    const [users, setUsers] = useState(usersData)
+    const [users, setUsers] = useState([])
+    const [loading, setLoading] = useState(false)
     const [currentUser, setCurrentUser] = useState(initialFormState)
     const [editing, setEditing] = useState(false)
 
+    // Initialize data
+    useEffect(() => {
+        getUsers()
+    }, [])
+
     // CRUD operations
     const addUser = user => {
-        user.id = users.length + 1
-        setUsers([...users, user])
+
+        fetch("http://localhost:8000/users", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(user)
+        }).then(result => {
+                setCurrentUser(initialFormState)
+                getUsers()
+            }
+        ).catch(console.log);
+
     }
+
+    const getUsers = () => {
+        setLoading(true)
+        fetch("http://localhost:8000/users")
+            .then(res => res.json())
+            .then(result => {
+                    setUsers(result)
+                    setLoading(false)
+                }
+            )
+            .catch(console.log);
+    }
+
 
     const deleteUser = id => {
         setEditing(false)
 
-        setUsers(users.filter(user => user.id !== id))
+        fetch("http://localhost:8000/users/" + id, {
+            method: "DELETE"
+        })
+            .then(res => res.json())
+            .then(result => {
+                setCurrentUser(initialFormState);
+                getUsers();
+            });
     }
 
     const updateUser = (id, updatedUser) => {
         setEditing(false)
 
-        setUsers(users.map(user => (user.id === id ? updatedUser : user)))
+        fetch("http://localhost:8000/users/" + id, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(updatedUser)
+        })
+            .then(res => res.json())
+            .then(result => {
+                setEditing(false)
+                getUsers()
+            });
+
     }
 
     const editRow = user => {
@@ -69,13 +114,16 @@ const App = () => {
                         <Fragment>
                             <h2>Edit user</h2>
 
-                            <AdvancedForm schema={formSchema} onSubmit={handleSubmit} initialValues={currentUser}/>
+                            <AdvancedForm schema={formSchema} onSubmit={handleEditSubmit} initialValues={currentUser}
+                                          buttonLabel="Update"/>
 
                         </Fragment>
                     ) : (
                         <Fragment>
                             <h2>Add user</h2>
-                            <AdvancedForm schema={formSchema} onSubmit={handleSubmit} initialValues={initialFormState}/>
+                            <AdvancedForm schema={formSchema} onSubmit={handleAddSubmit}
+                                          initialValues={initialFormState}
+                                          buttonLabel="Add"/>
                         </Fragment>
                     )}
                 </div>

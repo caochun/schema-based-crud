@@ -102,7 +102,7 @@ export const AdvancedForm = ({
                                 />
                             )
                         })}
-                        <button type="submit">
+                        <button type="submit" disabled={!isValid || isSubmitting}>
                             {buttonLabel}
                         </button>
                     </form>
